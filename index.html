@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Andes Airlines</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <h1>Andes Airlines</h1>
+
+  <div class="toolbar">
+    <label for="flightId">Vuelo:</label>
+    <select id="flightId">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+    <button id="load">Simular check-in</button>
+    <button id="reset">Restablecer</button>
+  </div>
+
+  <div class="main-content">
+    <div class="left-section">
+      <div class="airplane-content">
+        <div id="airplane-info" class="airplane-info"></div>
+        <div class="seats-wrapper">
+          <div class="airplane-container">
+            <div id="airplane" class="airplane"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="info">
+      <h2>Información</h2>
+      <div id="passengerSummary" class="passenger-summary"></div>
+      <pre id="passengerInfo">Elige un asiento para ver más detalles.</pre>
+    </aside>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+
+</html>
