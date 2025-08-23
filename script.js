@@ -645,33 +645,43 @@ function renderPlaneHorizontal(airplaneId) {
 }
 
 function clearOccupiedSeats() {
-  // Limpiar solo los asientos ocupados dinámicamente, no los pre-ocupados
+  const flightId = parseInt(document.getElementById("flightId").value);
+  const preOccupiedSeats = new Set(preOccupiedSeatsByFlight[flightId] || []);
+
+  // Limpiar solo los asientos ocupados dinámicamente, preservando los pre-ocupados
   seatData.forEach((passenger, alphaNumericSeatId) => {
-    // Solo limpiar si no es un asiento pre-ocupado
-    if (passenger && !passenger.isPreOccupied) {
-      const seatEl = document.getElementById(`seat-${alphaNumericSeatId}`);
-      if (seatEl) {
-        seatEl.classList.remove("occupied", "highlighted", "minor");
-        seatEl.title = "Asiento libre";
-        seatEl.textContent = alphaNumericSeatId; // Restaurar texto original
-        seatData.set(alphaNumericSeatId, null);
-      }
-    } else if (passenger && passenger.isPreOccupied) {
-      // Para asientos pre-ocupados, solo quitar el highlight pero mantener ocupado
-      const seatEl = document.getElementById(`seat-${alphaNumericSeatId}`);
-      if (seatEl) {
-        seatEl.classList.remove("highlighted");
-        // Mantener el título original
+    const numericId = seatIdMapping.get(alphaNumericSeatId);
+    const isPreOccupied = preOccupiedSeats.has(numericId);
+    const seatEl = document.getElementById(`seat-${alphaNumericSeatId}`);
+
+    if (seatEl) {
+      // Primero removemos todas las clases dinámicas
+      seatEl.classList.remove("occupied", "highlighted", "minor");
+      
+      if (isPreOccupied) {
+        // Re-aplicar el estado pre-ocupado
+        seatEl.classList.add("occupied");
         seatEl.title = "Asiento ocupado";
+        // Mantener los datos de pre-ocupado en seatData
+        seatData.set(alphaNumericSeatId, {
+          name: "",
+          dni: "",
+          isPreOccupied: true,
+          seatId: numericId
+        });
+      } else {
+        // Limpiar completamente los asientos no pre-ocupados
+        seatEl.title = "Asiento libre";
+        seatEl.textContent = alphaNumericSeatId;
+        seatData.set(alphaNumericSeatId, null);
       }
     }
   });
 }
 
 function paintPassengersSequentially(passengers) {
-  // Ya no filtramos los asientos pre-ocupados, los procesamos todos
   const flightId = parseInt(document.getElementById("flightId").value);
-  const preOccupiedSeats = preOccupiedSeatsByFlight[flightId] || [];
+  const preOccupiedSeats = new Set(preOccupiedSeatsByFlight[flightId] || []);
 
   return new Promise((resolve) => {
     let i = 0;
@@ -682,7 +692,6 @@ function paintPassengersSequentially(passengers) {
       if (i >= passengers.length) {
         clearInterval(timer);
         isCheckingIn = false;
-        // Marcar que ya se realizó el check-in para este vuelo
         hasCheckedIn = true;
         enableControlsAfterPainting();
         resolve();
@@ -690,8 +699,6 @@ function paintPassengersSequentially(passengers) {
       }
 
       const p = passengers[i];
-
-      // Convertir seatId numérico a formato alfanumérico
       const alphaNumericSeatId = seatIdMapping.get(p.seatId);
 
       if (!alphaNumericSeatId) {
@@ -703,32 +710,26 @@ function paintPassengersSequentially(passengers) {
       const seatEl = document.getElementById(`seat-${alphaNumericSeatId}`);
 
       if (seatEl) {
-        // Verificar si era un asiento pre-ocupado
-        const wasPreOccupied = preOccupiedSeats.includes(p.seatId);
+        const isPreOccupied = preOccupiedSeats.has(p.seatId);
 
-        seatEl.classList.add("occupied");
-
-        // Verificar si es menor de edad y agregar distintivo
-        const isMinor = p.age < 18;
-        if (isMinor) {
-          seatEl.classList.add("minor");
-          seatEl.textContent = `${alphaNumericSeatId}`;
-        } else {
+        // Preservar el estado de pre-ocupado si aplica
+        if (!isPreOccupied) {
+          seatEl.classList.add("occupied");
+          
+          const isMinor = p.age < 18;
+          if (isMinor) {
+            seatEl.classList.add("minor");
+          }
           seatEl.textContent = alphaNumericSeatId;
-        }
 
-        // Mejorar texto del tooltip: nombre (DNI) · Reserva # · etiquetas de estado
-        const stateTags = [];
-        if (isMinor) stateTags.push("MENOR");
-        seatEl.title = `${p.name} (${p.dni}) · Reserva ${p.purchaseId}${
-          stateTags.length ? " · " + stateTags.join(" · ") : ""
-        }`;
+          const stateTags = [];
+          if (isMinor) stateTags.push("MENOR");
+          seatEl.title = `${p.name} (${p.dni}) · Reserva ${p.purchaseId}${
+            stateTags.length ? " · " + stateTags.join(" · ") : ""
+          }`;
 
-        // Reemplazar los datos pre-ocupados con datos reales
-        seatData.set(alphaNumericSeatId, p);
-
-        if (wasPreOccupied) {
-        } else {
+          // Solo actualizar seatData para asientos no pre-ocupados
+          seatData.set(alphaNumericSeatId, p);
         }
       } else {
         console.error(
@@ -736,7 +737,7 @@ function paintPassengersSequentially(passengers) {
         );
       }
       i++;
-    }, 50); // simular tiempo de respuesta
+    }, 50);
   });
 }
 
